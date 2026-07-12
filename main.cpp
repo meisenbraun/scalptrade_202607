@@ -1,5 +1,8 @@
 #include <iostream>
+#include <memory>
+#include "exit_status.h"
 #include "programargs.h"
+#include "tcpconnection.h"
 
 void show_usage()
 {
@@ -8,19 +11,36 @@ void show_usage()
     std::cout << "Side must be either \'B\' or \'S\'.\n";
 }
 
-int main(int argc, char** argv)
+void debug_args(int argc, char** argv)
 {
-    if(argc != 9)
-    {
-        show_usage();
-        return 3;
-    }
-
     for (int i = 0; i < argc; ++i)
     {
         std::string arg = argv[i];
         std::cout << arg << "\n";
     }
+}
 
-    return 0;
+int main(int argc, char** argv)
+{
+    if(argc != 9)
+    {
+        std::cout << "Incorrect number of arguments!\n";
+        show_usage();
+        return exit_status_args;
+    }
+
+    //debug_args(argc, argv);
+    std::unique_ptr<ProgramArgs> args(new ProgramArgs);
+
+    bool parseRst = args->ParseArgs(argc, argv);
+    if (!parseRst)
+    {
+        show_usage();
+        return exit_status_args;
+    }
+
+    std::unique_ptr<TcpConnection> mdServer(new TcpConnection(args->mdAddr, args->mdPort));
+    mdServer->connect();
+
+    return exit_status_success;
 }

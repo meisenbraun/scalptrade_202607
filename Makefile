@@ -2,7 +2,7 @@ TARGET = scalptrade_202607
 SOURCES = $(wildcard *.cpp)
 OBJECTS = $(SOURCES:.cpp=.o)
 HEADERS = $(wildcard *.h)
-CPPFLAGS = -Wall -std=c++14 # C++ 14 per the exercise instructions
+CPPFLAGS = -g -O0 -Wall -std=c++14 # C++ 14 per the exercise instructions
 CPP = g++
 
 .PHONY: default all clean
