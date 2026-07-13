@@ -81,3 +81,8 @@ int TcpConnection::getFd() const
 {
     return socketFd_;
 }
+
+TcpConnection::DuplexMode TcpConnection::getDuplexMode() const
+{
+    return duplexMode_;
+}
