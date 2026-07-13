@@ -6,8 +6,10 @@
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <unistd.h>
 
-TcpConnection::TcpConnection(std::string const& addr, uint16_t port) :
+TcpConnection::TcpConnection(std::string const& addr, uint16_t port, DuplexMode duplexMode) :
+duplexMode_(duplexMode),
 addr_(addr),
 port_(port),
 socketFd_(-1)
@@ -34,6 +36,13 @@ int TcpConnection::connect()
         exit(exit_status_fail);
     }
 
+    auto nonBlockingRst = setNonBlocking();
+    if (nonBlockingRst == -1)
+    {
+        perror("Unable to set non blocking");
+        throw ProgramException(exit_status_fail);
+    }
+
     serv_addr_.reset(new sockaddr_in);
     serv_addr_->sin_family = AF_INET;
     serv_addr_->sin_port = htons(port_);
@@ -43,8 +52,10 @@ int TcpConnection::connect()
     if (pton_rst <= 0)
     {
         perror("Unable to resolve IP address");
-        exit(exit_status_fail);
+        throw ProgramException(exit_status_fail);
     }
+
+    std::cout << "Connecting to " << addr_ << std::string(":") << port_ << "...\n";
 
     auto connectRst = ::connect(socketFd_, (sockaddr*)(serv_addr_.get()), sizeof(sockaddr_in));
 
@@ -53,5 +64,20 @@ int TcpConnection::connect()
 
 int TcpConnection::close()
 {
-    return 0;
+    int closeRst = ::close(socketFd_);
+    if (closeRst != -1)
+    {
+        std::cout << "Connection to " << addr_ << std::string(":") << port_ << " closed\n";
+    }
+    else
+    {
+        perror("Unable to close connection");
+    }
+
+    return closeRst;
+}
+
+int TcpConnection::getFd() const
+{
+    return socketFd_;
 }

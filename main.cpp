@@ -22,25 +22,32 @@ void debug_args(int argc, char** argv)
 
 int main(int argc, char** argv)
 {
-    if(argc != 9)
+    try
     {
-        std::cout << "Incorrect number of arguments!\n";
-        show_usage();
-        return exit_status_args;
+        if(argc != 9)
+        {
+            std::cout << "Incorrect number of arguments!\n";
+            show_usage();
+            throw ProgramException(exit_status_args);
+        }
+
+        //debug_args(argc, argv);
+        std::unique_ptr<ProgramArgs> args(new ProgramArgs);
+
+        bool parseRst = args->ParseArgs(argc, argv);
+        if (!parseRst)
+        {
+            show_usage();
+            throw ProgramException(exit_status_args);
+        }
+
+        std::unique_ptr<TcpConnection> mdServer(new TcpConnection(args->mdAddr, args->mdPort));
+        mdServer->connect();
     }
-
-    //debug_args(argc, argv);
-    std::unique_ptr<ProgramArgs> args(new ProgramArgs);
-
-    bool parseRst = args->ParseArgs(argc, argv);
-    if (!parseRst)
+    catch (ProgramException &e)
     {
-        show_usage();
-        return exit_status_args;
+        return e.code();
     }
-
-    std::unique_ptr<TcpConnection> mdServer(new TcpConnection(args->mdAddr, args->mdPort));
-    mdServer->connect();
 
     return exit_status_success;
 }
