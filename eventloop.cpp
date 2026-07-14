@@ -1,6 +1,5 @@
 #include "eventloop.h"
 
-#include "connectioncontext.h"
 #include "exit_status.h"
 #include "tcpconnection.h"
 
@@ -18,6 +17,8 @@ running_(false)
 
 EventLoop::~EventLoop()
 {
+
+
     close();
 }
 
@@ -33,6 +34,10 @@ bool EventLoop::init()
     {
         perror("epoll create failed");
         throw ProgramException(exit_status_fail);
+    }
+    else
+    {
+        std::cout << "epoll created\n";
     }
 
     return true;
@@ -68,9 +73,34 @@ bool EventLoop::run()
         // loop over signaled fds
         for (int i = 0; i < rst; i++)
         {
-            auto fd = events_[i].data.fd;
+            // handle connection established (SYN-ACK)
+            TcpConnection* conn = static_cast<TcpConnection*>(events_[i].data.ptr);
+            const bool isConnected = conn->isConnected();
+            if (!isConnected && events_[i].events & EPOLLOUT)
+            {
+                const bool connRst  = conn->handleConnectionEstablished();
+                if (connRst)
+                {
+                    events_[i].events = conn->eventMask();
+                    epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, conn->getFd(), &events_[i]);
+                }
+                continue;
+            }
+
+            // process incoming data
+            if (events_[i].events & EPOLLIN)
+            {
+                conn->recv();
+                if (conn->isConnected() == false)
+                {
+                    // connection dropped, cleanup the object
+                    delete conn;
+                }
+            }
         }
     }
+
+    std::cout << "EventLoop exit\n";
 
     return true;
 }
@@ -95,26 +125,7 @@ bool EventLoop::add(TcpConnection* conn)
     epoll_event ev;
     ev.events = 0;
 
-    TcpConnection::DuplexMode duplexMode = conn->getDuplexMode();
-
-    if (duplexMode == TcpConnection::HalfDuplex_In || TcpConnection::HalfDuplex_Out || TcpConnection::FullDuplex)
-    {
-        if (duplexMode & TcpConnection::HalfDuplex_In)
-        {
-            ev.events |= EPOLLIN;
-        }
-        if (duplexMode & TcpConnection::HalfDuplex_Out)
-        {
-            ev.events |= EPOLLOUT;
-        }
-    }
-    else
-    {
-        // default to full duplex
-        ev.events |= EPOLLIN | EPOLLOUT;
-    }
-
-    ev.events |= EPOLLET;
+    ev.events = conn->eventMask();
     ev.data.ptr = static_cast<void*>(conn);
     auto ctlRst = epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, conn->getFd(), &ev);
     if (ctlRst == -1)

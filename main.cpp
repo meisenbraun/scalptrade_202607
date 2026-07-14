@@ -1,15 +1,10 @@
 #include <iostream>
 #include <memory>
+#include "application.h"
+#include "eventloop.h"
 #include "exit_status.h"
 #include "programargs.h"
 #include "tcpconnection.h"
-
-void show_usage()
-{
-    std::cout << "Usage scalptrade_202607 <symbol> <Side> <Max size> <VWAP window, seconds> <MD TCP addr> <MD TCP port> <Order Entry TCP addr> <Order Entry port>\n\n";
-    std::cout <<"Symbol must be at most 6 characters.\n";
-    std::cout << "Side must be either \'B\' or \'S\'.\n";
-}
 
 void debug_args(int argc, char** argv)
 {
@@ -22,6 +17,22 @@ void debug_args(int argc, char** argv)
 
 int main(int argc, char** argv)
 {
+    bool retval = exit_status_success;
+
+    std::unique_ptr<Application> app(new Application(argc, argv));
+
+    app->init();
+    app->run();
+}
+
+#if 0
+int main(int argc, char** argv)
+{
+    bool retval = exit_status_success;
+
+    std::unique_ptr<EventLoop> eventLoop;
+
+
     try
     {
         if(argc != 9)
@@ -41,13 +52,35 @@ int main(int argc, char** argv)
             throw ProgramException(exit_status_args);
         }
 
+        eventLoop.reset(new EventLoop());
+
         std::unique_ptr<TcpConnection> mdServer(new TcpConnection(args->mdAddr, args->mdPort));
+        bool mdAddRst = eventLoop->add(mdServer.get());
+        if (mdAddRst == false)
+        {
+            throw ProgramException(exit_status_fail);
+        }
+
+        std::unique_ptr<TcpConnection> orderEntry(new TcpConnection(args->orderEntryAddr, args->orderEntryPort));
+        bool oeAddRst = eventLoop->add(orderEntry.get());
+        if (oeAddRst == false)
+        {
+            throw ProgramException(exit_status_fail);
+        }
+
         mdServer->connect();
+        orderEntry->connect();
+        eventLoop->run();
+
+        std::cout << "Event loop exit\n";
     }
     catch (ProgramException &e)
     {
-        return e.code();
+        retval = e.code();
     }
 
-    return exit_status_success;
+    std::cout << "Program exiting with code " <<  retval << "\n";
+
+    return retval;
 }
+#endif

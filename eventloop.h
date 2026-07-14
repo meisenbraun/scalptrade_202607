@@ -23,6 +23,6 @@ private:
     int epoll_fd_;
     bool running_;
     static const int MaxEvents = 1024;
-    static const int EpollTimeoutMs = 1000;
+    static const int EpollTimeoutMs = 10000;
     std::array<epoll_event, MaxEvents> events_;
 };
