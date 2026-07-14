@@ -1,5 +1,6 @@
 #include "tcpconnection.h"
 #include "exit_status.h"
+#include "market_data.h"
 #include <iostream>
 #include <sstream>
 
@@ -136,15 +137,25 @@ bool TcpConnection::handleConnectionEstablished()
 void TcpConnection::recv()
 {
     char readBuffer[BufferSize_];
+    char* recStart = readBuffer;
+    int recStartIdx = 0;
 
     // while loop required to drain recv buffer for ET mode
     while (true)
     {
-        auto recvRst = ::recv(socketFd_, readBuffer, BufferSize_ - 1, 0);
+        auto recvRst = ::recv(socketFd_, readBuffer + recStartIdx, BufferSize_ - recStartIdx, 0);
 
         if (recvRst > 0)
         {
             readBuffer[recvRst] = '\0';
+
+            switch (readBuffer[recStartIdx])
+            {
+            case MessageTypeQuote: break;
+            case MessageTypeTrade: break;
+            case MessageTypeOrder: break;
+            default: ; // invalid message
+            }
         }
         else if (recvRst == 0)
         {
@@ -154,7 +165,7 @@ void TcpConnection::recv()
         }
         else
         {
-            if (errno == EAGAIN || errno == EWOULDBLOCK)
+            if (errno == EAGAIN || errno == EWOULDBLOCK) // ET must drain the buffer
             {
                 break; // end of buffer; not an error in this context
             }

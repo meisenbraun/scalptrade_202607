@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <string>
 #include <memory>
+#include "market_data.h"
 
 struct sockaddr_in;
 
@@ -25,7 +26,7 @@ private:
     int setNonBlocking();
     bool init();
 
-    static const int BufferSize_ = 256;
+    static const int BufferSize_ = sizeof(QuoteData) * 10;
     std::string addr_;
     uint16_t port_;
     int socketFd_;
