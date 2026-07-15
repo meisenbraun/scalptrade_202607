@@ -1,5 +1,6 @@
 #pragma once
 #include <memory>
+#include "spscqueue.h"
 
 
 class ProgramArgs;
@@ -14,11 +15,12 @@ public:
     Application& operator=(Application& app) = delete;
 
     void init();
-    int run();
+    void run();
+    SPSCQueue& getSPSCQueue();
 
 private:
     void show_usage();
-
+    SPSCQueue eventQueue_;
     std::unique_ptr<ProgramArgs> args_;
     std::unique_ptr<EventLoop> eventLoop_;
     std::unique_ptr<TcpConnection> mdConnection_;

@@ -1,4 +1,6 @@
 #include "tcpconnection.h"
+
+#include "application.h"
 #include "exit_status.h"
 #include "market_data.h"
 #include <iostream>
@@ -13,7 +15,7 @@
 #include <unistd.h>
 #include <sys/epoll.h>
 
-TcpConnection::TcpConnection(std::string const& addr, uint16_t port) :
+TcpConnection::TcpConnection(std::string const& addr, uint16_t port, Application& app) :
 addr_(addr),
 port_(port),
 socketFd_(-1),
@@ -51,7 +53,6 @@ bool TcpConnection::init()
 
 int TcpConnection::connect()
 {
-
     auto nonBlockingRst = setNonBlocking();
     if (nonBlockingRst == -1)
     {
@@ -74,6 +75,11 @@ int TcpConnection::connect()
     std::cout << "Connecting to " << toString() << "...\n";
 
     auto connectRst = ::connect(socketFd_, (sockaddr*)(serv_addr_.get()), sizeof(sockaddr_in));
+    if (connectRst == -1)
+    {
+        perror("connect failed");
+        throw ProgramException(exit_status_fail);
+    }
 
     return 0;
 }
@@ -137,7 +143,7 @@ bool TcpConnection::handleConnectionEstablished()
 void TcpConnection::recv()
 {
     char readBuffer[BufferSize_];
-    char* recStart = readBuffer;
+    //char* recStart = readBuffer;
     int recStartIdx = 0;
 
     // while loop required to drain recv buffer for ET mode
@@ -149,11 +155,16 @@ void TcpConnection::recv()
         {
             readBuffer[recvRst] = '\0';
 
+            MessageType msgType = static_cast<MessageType>(readBuffer[recStartIdx]);
+
+            QueueEvent ev;
+            ev.msgType = msgType;
+
             switch (readBuffer[recStartIdx])
             {
-            case MessageTypeQuote: break;
-            case MessageTypeTrade: break;
-            case MessageTypeOrder: break;
+            case MessageTypeQuote: memcpy(&ev.quote, readBuffer + recStartIdx + sizeof(MessageType), sizeof(QuoteDataWire)); break;
+            case MessageTypeTrade: memcpy(&ev.trade, readBuffer + recStartIdx + sizeof(MessageType), sizeof(TradeDataWire)); break;
+            //case MessageTypeOrder: break;
             default: ; // invalid message
             }
         }

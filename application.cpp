@@ -40,18 +40,18 @@ void Application::init()
 {
 }
 
-int Application::run()
+void Application::run()
 {
     eventLoop_.reset(new EventLoop());
 
-    std::unique_ptr<TcpConnection> mdServer(new TcpConnection(args_->mdAddr, args_->mdPort));
+    std::unique_ptr<TcpConnection> mdServer(new TcpConnection(args_->mdAddr, args_->mdPort, *this));
     bool mdAddRst = eventLoop_->add(mdServer.get());
     if (mdAddRst == false)
     {
         throw ProgramException(exit_status_fail);
     }
 
-    std::unique_ptr<TcpConnection> orderEntry(new TcpConnection(args_->orderEntryAddr, args_->orderEntryPort));
+    std::unique_ptr<TcpConnection> orderEntry(new TcpConnection(args_->orderEntryAddr, args_->orderEntryPort, *this));
     bool oeAddRst = eventLoop_->add(orderEntry.get());
     if (oeAddRst == false)
     {
@@ -63,4 +63,9 @@ int Application::run()
     eventLoop_->run();
 
     std::cout << "Application exit\n";
+}
+
+SPSCQueue& Application::getSPSCQueue()
+{
+    return eventQueue_;
 }

@@ -6,7 +6,8 @@ enum MessageType: char
 {
     MessageTypeQuote =  'Q',
     MessageTypeTrade = 'T',
-    MessageTypeOrder = 'O'
+    MessageTypeOrder = 'O',
+    MessageTypeNone = 'N'
 };
 
 enum OrderSide: char
@@ -16,10 +17,15 @@ enum OrderSide: char
 };
 
 // Wire types
-#pragma pack(1)
-struct QuoteData
+#pragma pack(push, 1)
+
+struct WireHeader
 {
     MessageType msgType;
+};
+
+struct QuoteDataWire
+{
     std::array<char, 6> sym;
     std::array<char, 19> timestampNs; // nanos since epoch
     std::array<char, 6> bidQty;
@@ -28,9 +34,8 @@ struct QuoteData
     std::array<char, 6> askPrice;
 };
 
-struct TradeData
+struct TradeDataWire
 {
-    MessageType msgType;
     std::array<char, 6> sym;
     std::array<char, 19> timestampNs;
     std::array<char, 6> qty;
@@ -38,11 +43,25 @@ struct TradeData
 };
 
 
-struct OrderData
+struct OrderDataWire
 {
-    MessageType msgType;
     std::array<char, 6> sym;
     std::array<char, 19> timestampNs;
     std::array<char, 6> qty;
     std::array<char, 6> price;
 };
+
+
+// Would use a std::variant here, but
+// Limited to C++14 and std::variant is not available
+struct QueueEvent
+{
+    MessageType msgType;
+
+    union
+    {
+        QuoteDataWire quote;
+        TradeDataWire trade;
+    };
+};
+#pragma pack(pop)

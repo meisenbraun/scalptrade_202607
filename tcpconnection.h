@@ -5,6 +5,7 @@
 #include "market_data.h"
 
 struct sockaddr_in;
+class Application;
 
 class TcpConnection
 {
@@ -12,7 +13,7 @@ public:
     TcpConnection(TcpConnection const&) = delete;
     TcpConnection& operator=(TcpConnection const&) = delete;
 
-    TcpConnection(std::string const& addr, uint16_t port);
+    TcpConnection(std::string const& addr, uint16_t port, Application& app);
     ~TcpConnection();
     int connect();
     int close();
@@ -26,7 +27,7 @@ private:
     int setNonBlocking();
     bool init();
 
-    static const int BufferSize_ = sizeof(QuoteData) * 10;
+    static const int BufferSize_ = sizeof(QuoteDataWire) * 10;
     std::string addr_;
     uint16_t port_;
     int socketFd_;

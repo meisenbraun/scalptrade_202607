@@ -19,10 +19,12 @@ int main(int argc, char** argv)
 {
     bool retval = exit_status_success;
 
-    std::unique_ptr<Application> app(new Application(argc, argv));
+    Application app(argc, argv);
 
-    app->init();
-    app->run();
+    app.init();
+    app.run();
+
+    return retval;
 }
 
 #if 0
