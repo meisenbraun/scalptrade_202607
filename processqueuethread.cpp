@@ -112,7 +112,6 @@ void ProcessQueueThread::run()
             nextVwapSync = now + period;
         }
     }
-
 }
 
 bool ProcessQueueThread::processQuote(QuoteDataWire&& data)
@@ -209,8 +208,6 @@ bool ProcessQueueThread::processTrade(TradeDataWire&& data)
 {
     TradeData trade;
 
-    std::cout << "Processing Trade\n";
-
     //trade.sym.assign(data.sym.data(), data.sym.size());
 
     try
@@ -220,6 +217,8 @@ bool ProcessQueueThread::processTrade(TradeDataWire&& data)
     catch (std::exception& e)
     {
         // parse error, skip the record
+
+        std::cout << "ERROR1\n";
         return false;
     }
 
@@ -229,6 +228,7 @@ bool ProcessQueueThread::processTrade(TradeDataWire&& data)
     }
     catch (std::exception& e)
     {
+        std::cout << "ERROR2\n";
         return false;
     }
 
@@ -238,6 +238,7 @@ bool ProcessQueueThread::processTrade(TradeDataWire&& data)
     }
     catch (std::exception& e)
     {
+        std::cout << "ERROR3\n";
         return false;
     }
 
@@ -246,6 +247,8 @@ bool ProcessQueueThread::processTrade(TradeDataWire&& data)
 
     const int denominator = trade.qty;
     vwap_denominator_ += denominator;
+
+    std::cout << "Processing Trade (denominator:" << denominator << "  qty:" << trade.qty << ")...\n";
 
     return true;
 }
@@ -263,6 +266,8 @@ void ProcessQueueThread::start()
 void ProcessQueueThread::updateVwap()
 {
     long newVwap = 0;
+
+    std::cout <<"UPDATE VWAP TRIGGERED\n";
 
     if (vwap_denominator_ != 0)
     {

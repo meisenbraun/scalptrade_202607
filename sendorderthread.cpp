@@ -11,6 +11,8 @@
 #include <immintrin.h>
 #include <sched.h>
 
+#include <cstring>
+
 SendOrderThread::SendOrderThread() :
 thread_(),
 pubSig_(nullptr),
@@ -91,6 +93,9 @@ void SendOrderThread::run()
 
     //bool updated = false;
     bool shutdown = false;
+
+    const char* initMsg = "SEND THREAD READY!\n";
+    tcpConnection_->send((void*)initMsg, strlen(initMsg));
 
     while (true)
     {

@@ -52,6 +52,23 @@ void Application::init()
     CPU_SET(1, &affinity_mask); // Pin to core 1
     sched_setaffinity(0, sizeof(cpu_set_t), &affinity_mask);
 
+    eventLoop_.reset(new EventLoop(*this));
+
+    mdConnection_.reset(new TcpConnection(args_->mdAddr, args_->mdPort, *this));
+    bool mdAddRst = eventLoop_->add(mdConnection_.get());
+    if (mdAddRst == false)
+    {
+        throw ProgramException(exit_status_fail);
+    }
+
+    orderEntryConnection_.reset(new TcpConnection(args_->orderEntryAddr, args_->orderEntryPort, *this));
+    bool oeAddRst = eventLoop_->add(orderEntryConnection_.get());
+    if (oeAddRst == false)
+    {
+        throw ProgramException(exit_status_fail);
+    }
+
+
 
     processQueueThread_.setSym(args_->sym);
     processQueueThread_.setVwapInterval(args_->vwapWinSizeSec);
@@ -69,24 +86,8 @@ void Application::run()
     processQueueThread_.start();
     sendOrderThread_.start();
 
-    eventLoop_.reset(new EventLoop(*this));
-
-    std::unique_ptr<TcpConnection> mdServer(new TcpConnection(args_->mdAddr, args_->mdPort, *this));
-    bool mdAddRst = eventLoop_->add(mdServer.get());
-    if (mdAddRst == false)
-    {
-        throw ProgramException(exit_status_fail);
-    }
-
-    std::unique_ptr<TcpConnection> orderEntry(new TcpConnection(args_->orderEntryAddr, args_->orderEntryPort, *this));
-    bool oeAddRst = eventLoop_->add(orderEntry.get());
-    if (oeAddRst == false)
-    {
-        throw ProgramException(exit_status_fail);
-    }
-
-    mdServer->connect();
-    orderEntry->connect();
+    mdConnection_->connect();
+    orderEntryConnection_->connect();
     eventLoop_->run();
 
     std::cout << "Application exit\n";

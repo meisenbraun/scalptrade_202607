@@ -161,7 +161,7 @@ void TcpConnection::recv(SPSCQueue& queue)
     const int quoteReadBufferSize = sizeof(QuoteDataWire);
     const int tradeReadBufferSize = sizeof(TradeDataWire);
     //char* recStart = readBuffer;
-    int recStartIdx = 0;
+    //int recStartIdx = 0;
 
     // while loop required to drain recv buffer for ET mode
     while (true)
@@ -174,11 +174,13 @@ void TcpConnection::recv(SPSCQueue& queue)
             {
                 readBuffer = quoteReadBuffer;
                 readBufferSize = quoteReadBufferSize;
+                std::cout <<"MESSAGE TYPE QUOTE!\n";
             }
             else if (msgType == MessageTypeTrade)
             {
                 readBuffer = tradeReadBuffer;
                 readBufferSize = tradeReadBufferSize;
+                std::cout <<"MESSAGE TYPE TRADE!\n";
             }
             else
             {
@@ -186,7 +188,7 @@ void TcpConnection::recv(SPSCQueue& queue)
             }
         }
 
-        auto recvRst = ::recv(socketFd_, readBuffer + recStartIdx, readBufferSize, 0);
+        auto recvRst = ::recv(socketFd_, readBuffer, readBufferSize, 0);
 
         //auto recvRst = ::recv(socketFd_, readBuffer + recStartIdx, BufferSize_ - recStartIdx, 0);
 
@@ -206,14 +208,14 @@ void TcpConnection::recv(SPSCQueue& queue)
             {
             case MessageTypeQuote:
                 {
-                    memcpy(&ev.quote, readBuffer + recStartIdx + sizeof(MessageType), sizeof(QuoteDataWire));
+                    memcpy(&ev.quote, readBuffer, sizeof(QuoteDataWire));
                     queue.enqueue(std::move(ev));
                     //recStartIdx += sizeof(MessageType) + sizeof(QuoteDataWire);
                 }
                 break;
             case MessageTypeTrade:
                 {
-                    memcpy(&ev.trade, readBuffer + recStartIdx + sizeof(MessageType), sizeof(TradeDataWire));
+                    memcpy(&ev.trade, readBuffer, sizeof(TradeDataWire));
                     queue.enqueue(std::move(ev));
                     //recStartIdx += sizeof(MessageType) + sizeof(TradeDataWire);
                 }
