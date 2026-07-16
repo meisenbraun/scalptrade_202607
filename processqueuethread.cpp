@@ -178,7 +178,7 @@ bool ProcessQueueThread::processQuote(QuoteDataWire&& data)
                 std::cout << "... Sending order!\n";
 
                 // update params for order thread
-                pubSig_->qty = std::max(quote.askQty, maxSize_);
+                pubSig_->qty = std::min(quote.askQty, maxSize_);
                 pubSig_->price = last_vwap_;
                 pubSig_->updated.store(true, std::memory_order_release);
             }
@@ -193,7 +193,7 @@ bool ProcessQueueThread::processQuote(QuoteDataWire&& data)
                 std::cout << "... Sending order!\n";
 
                 // update params for order thread
-                pubSig_->qty = std::max(quote.bidQty, maxSize_);
+                pubSig_->qty = std::min(quote.bidQty, maxSize_);
                 pubSig_->price = last_vwap_;
                 pubSig_->updated.store(true, std::memory_order_release);
             }

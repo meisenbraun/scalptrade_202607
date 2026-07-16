@@ -35,6 +35,7 @@ struct QuoteDataWire
     std::array<char, 6>  bidPrice;
     std::array<char, 6>  askQty;
     std::array<char, 6>  askPrice;
+    std::array<char, 7>  seqNum; // monotically increasing id
 };
 
 struct TradeDataWire
@@ -53,6 +54,7 @@ struct OrderDataWire
     std::array<char, 4> side;
     std::array<char, 6> qty;
     std::array<char, 6> price;
+    std::array<char, 7>  corrId; // correlation ID -- seqNum of the quote that triggered the order
 };
 
 
@@ -80,6 +82,7 @@ struct QuoteData
     int32_t bidPrice;
     int32_t askQty;
     int32_t askPrice;
+    int32_t seqNum;
 };
 
 struct TradeData
