@@ -77,8 +77,15 @@ int TcpConnection::connect()
     auto connectRst = ::connect(socketFd_, (sockaddr*)(serv_addr_.get()), sizeof(sockaddr_in));
     if (connectRst == -1)
     {
-        perror("connect failed");
-        throw ProgramException(exit_status_fail);
+        if (errno == EINPROGRESS)
+        {
+            std::cout << "Connecting...\n";
+        }
+        else
+        {
+            perror("connect failed");
+            throw ProgramException(exit_status_fail);
+        }
     }
 
     return 0;
@@ -162,8 +169,19 @@ void TcpConnection::recv()
 
             switch (readBuffer[recStartIdx])
             {
-            case MessageTypeQuote: memcpy(&ev.quote, readBuffer + recStartIdx + sizeof(MessageType), sizeof(QuoteDataWire)); break;
-            case MessageTypeTrade: memcpy(&ev.trade, readBuffer + recStartIdx + sizeof(MessageType), sizeof(TradeDataWire)); break;
+            case MessageTypeQuote:
+                {
+                    memcpy(&ev.quote, readBuffer + recStartIdx + sizeof(MessageType), sizeof(QuoteDataWire));
+                    recStartIdx += sizeof(MessageType) + sizeof(QuoteDataWire);
+                }
+                break;
+            case MessageTypeTrade:
+                {
+                    memcpy(&ev.trade, readBuffer + recStartIdx + sizeof(MessageType), sizeof(TradeDataWire));
+                    recStartIdx += sizeof(MessageType) + sizeof(TradeDataWire);
+                }
+                break;
+
             //case MessageTypeOrder: break;
             default: ; // invalid message
             }
@@ -202,4 +220,36 @@ std::string TcpConnection::toString() const
     ostrm << addr_ << ":" << port_;
 
     return ostrm.str();
+}
+
+bool TcpConnection::resumeSend()
+{
+    return send(writeBuffer_, writeBufferSz_);
+}
+
+bool TcpConnection::send(void* data, int dataLen)
+{
+    auto sendRst = ::send(socketFd_, data, dataLen, 0);
+    if (sendRst < 0)
+    {
+        if (errno == EAGAIN)
+        {
+            eventMask_ |= EPOLLOUT;
+
+            for (int i = 0; i < dataLen; ++i)
+            {
+                writeBuffer_[i] = static_cast<char*>(data)[i];
+            }
+            writeBufferSz_ = dataLen;
+        }
+        else
+        {
+            connected_ = false; // write error
+        }
+
+        return false;
+    }
+    eventMask_ &= ~EPOLLOUT;
+
+    return true;
 }

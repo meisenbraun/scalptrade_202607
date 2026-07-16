@@ -1,5 +1,6 @@
 #pragma once
 #include <array>
+#include <string>
 
 
 enum MessageType: char
@@ -7,7 +8,9 @@ enum MessageType: char
     MessageTypeQuote =  'Q',
     MessageTypeTrade = 'T',
     MessageTypeOrder = 'O',
-    MessageTypeNone = 'N'
+
+    MessageTypeNone = 'N', // Special; Queue empty flag
+    MessageTypeTerm = 'E'  // Special; shutdown indicator flag
 };
 
 enum OrderSide: char
@@ -26,20 +29,20 @@ struct WireHeader
 
 struct QuoteDataWire
 {
-    std::array<char, 6> sym;
+    std::array<char, 6>  sym;
     std::array<char, 19> timestampNs; // nanos since epoch
-    std::array<char, 6> bidQty;
-    std::array<char, 6> bitPrice;
-    std::array<char, 6> askQty;
-    std::array<char, 6> askPrice;
+    std::array<char, 6>  bidQty;
+    std::array<char, 6>  bidPrice;
+    std::array<char, 6>  askQty;
+    std::array<char, 6>  askPrice;
 };
 
 struct TradeDataWire
 {
-    std::array<char, 6> sym;
+    std::array<char, 6>  sym;
     std::array<char, 19> timestampNs;
-    std::array<char, 6> qty;
-    std::array<char, 6> price;
+    std::array<char, 6>  qty;
+    std::array<char, 6>  price;
 };
 
 
@@ -47,6 +50,7 @@ struct OrderDataWire
 {
     std::array<char, 6> sym;
     std::array<char, 19> timestampNs;
+    std::array<char, 4> side;
     std::array<char, 6> qty;
     std::array<char, 6> price;
 };
@@ -65,3 +69,34 @@ struct QueueEvent
     };
 };
 #pragma pack(pop)
+
+
+struct QuoteData
+{
+    // sym omitted in parsed data structure; invariant for a data feed
+    //std::string sym;
+    uint64_t timestampNs; // nanos since epoch
+    int32_t bidQty;
+    int32_t bidPrice;
+    int32_t askQty;
+    int32_t askPrice;
+};
+
+struct TradeData
+{
+    // sym omitted in parsed data structure; invariant for a data feed
+    //std::string sym;
+    uint64_t timestampNs;
+    int32_t qty;
+    int32_t price;
+};
+
+
+// struct OrderData
+// {
+//     // sym omitted in parsed data structure; invariant for a data feed
+//     //std::string sym;
+//     uint64_t timestampNs;
+//     int32_t qty;
+//     int32_t price;
+// };

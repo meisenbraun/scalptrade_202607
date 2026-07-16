@@ -22,12 +22,17 @@ public:
     bool handleConnectionEstablished();
     int eventMask() const;
     void recv();
+    bool send(void* data, int dataLen);
+    bool resumeSend();
     std::string toString() const;
 private:
     int setNonBlocking();
     bool init();
 
     static const int BufferSize_ = sizeof(QuoteDataWire) * 10;
+    char writeBuffer_[sizeof(OrderDataWire) * 2];
+    int writeBufferSz_;
+
     std::string addr_;
     uint16_t port_;
     int socketFd_;

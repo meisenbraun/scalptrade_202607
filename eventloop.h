@@ -2,17 +2,18 @@
 #include <array>
 #include <sys/epoll.h>
 
-//#include "tcpconnection.h"
+#include "application.h"
 
 class TcpConnection;
 
 class EventLoop
 {
 public:
-    EventLoop();
-    ~EventLoop();
     EventLoop(EventLoop const&) = delete;
     EventLoop& operator=(EventLoop const&) = delete;
+
+    EventLoop(Application& application);
+    ~EventLoop();
 
     bool init();
     bool run();
@@ -20,6 +21,7 @@ public:
     bool add(TcpConnection* conn);
 
 private:
+    Application& app_;
     int epoll_fd_;
     bool running_;
     static const int MaxEvents = 1024;

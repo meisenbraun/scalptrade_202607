@@ -17,7 +17,7 @@ struct ProgramArgs
     std::string sym;
     SideEnum side;
     uint16_t vwapWinSizeSec; // vwap window size, seconds
-    uint32_t maxSize;
+    int32_t maxSize;
     std::string mdAddr;
     uint16_t mdPort;
     std::string orderEntryAddr;

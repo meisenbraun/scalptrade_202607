@@ -8,7 +8,8 @@
 #include <sys/epoll.h>
 #include <unistd.h>
 
-EventLoop::EventLoop() :
+EventLoop::EventLoop(Application& application) :
+app_(application),
 epoll_fd_(-1),
 running_(false)
 {
@@ -81,6 +82,7 @@ bool EventLoop::run()
                 const bool connRst  = conn->handleConnectionEstablished();
                 if (connRst)
                 {
+                    // reset the event mask to clear EPOLLOUT
                     events_[i].events = conn->eventMask();
                     epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, conn->getFd(), &events_[i]);
                 }
@@ -97,6 +99,20 @@ bool EventLoop::run()
                     delete conn;
                 }
             }
+            if (events_[i].events & EPOLLOUT)
+            {
+                conn->resumeSend(); // retry a blocked send
+                if (conn->isConnected())
+                {
+                    // reset the event mask to clear EPOLLOUT
+                    events_[i].events = conn->eventMask();
+                    epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, conn->getFd(), &events_[i]);
+                }
+                else
+                {
+                    delete conn;
+                }
+            }
         }
     }
 
@@ -107,6 +123,8 @@ bool EventLoop::run()
 
 int EventLoop::close()
 {
+    app_.getSPSCQueue().enqueue(QueueEvent{MessageTypeTerm}); // Signal worker thread to shutdown
+
     auto closeRst = ::close(epoll_fd_);
     if (closeRst != -1)
     {
