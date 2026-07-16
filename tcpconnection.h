@@ -6,6 +6,7 @@
 
 struct sockaddr_in;
 class Application;
+class SPSCQueue;
 
 class TcpConnection
 {
@@ -21,7 +22,7 @@ public:
     bool isConnected() const;
     bool handleConnectionEstablished();
     int eventMask() const;
-    void recv();
+    void recv(SPSCQueue& queue);
     bool send(void* data, int dataLen);
     bool resumeSend();
     std::string toString() const;
@@ -29,7 +30,7 @@ private:
     int setNonBlocking();
     bool init();
 
-    static const int BufferSize_ = sizeof(QuoteDataWire) * 10;
+    static const int BufferSize_ = sizeof(QuoteDataWire) * 10 + 1;
     char writeBuffer_[sizeof(OrderDataWire) * 2];
     int writeBufferSz_;
 

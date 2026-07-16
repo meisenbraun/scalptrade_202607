@@ -172,8 +172,12 @@ bool ProcessQueueThread::processQuote(QuoteDataWire&& data)
     {
         case SideEnum::SideBuy:
         {
+            std::cout<<"Processing BUY quote (ask:" << quote.askPrice << " vwap: " << last_vwap_ << ")...\n";
+
             if (quote.askPrice < last_vwap_)
             {
+                std::cout << "... Sending order!\n";
+
                 // update params for order thread
                 pubSig_->qty = std::max(quote.askQty, maxSize_);
                 pubSig_->price = last_vwap_;
@@ -183,8 +187,12 @@ bool ProcessQueueThread::processQuote(QuoteDataWire&& data)
         }
         case SideEnum::SideSell:
         {
+            std::cout<<"Processing SELL quote (bid:" << quote.bidPrice << " vwap: " << last_vwap_ << ")...\n";
+
             if (quote.bidPrice > last_vwap_)
             {
+                std::cout << "... Sending order!\n";
+
                 // update params for order thread
                 pubSig_->qty = std::max(quote.bidQty, maxSize_);
                 pubSig_->price = last_vwap_;
@@ -200,6 +208,8 @@ bool ProcessQueueThread::processQuote(QuoteDataWire&& data)
 bool ProcessQueueThread::processTrade(TradeDataWire&& data)
 {
     TradeData trade;
+
+    std::cout << "Processing Trade\n";
 
     //trade.sym.assign(data.sym.data(), data.sym.size());
 
@@ -256,7 +266,9 @@ void ProcessQueueThread::updateVwap()
 
     if (vwap_denominator_ != 0)
     {
+
         newVwap = vwap_numerator_ / vwap_denominator_;
+        std::cout << "UPDATING VWAP " << last_vwap_ << "  " << newVwap << std::endl;
         last_vwap_ = newVwap;
         vwap_valid_ = true;
     }

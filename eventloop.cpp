@@ -92,7 +92,7 @@ bool EventLoop::run()
             // process incoming data
             if (events_[i].events & EPOLLIN)
             {
-                conn->recv();
+                conn->recv(app_.getSPSCQueue());
                 if (conn->isConnected() == false)
                 {
                     // connection dropped, cleanup the object

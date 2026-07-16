@@ -119,6 +119,8 @@ void SendOrderThread::run()
 
 
         /// send order
+
+        tcpConnection_->send(&ord, sizeof(OrderDataWire));
     }
 }
 

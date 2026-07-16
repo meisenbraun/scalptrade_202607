@@ -5,5 +5,7 @@
 while true; do
     while true; do
         cat $2
+        echo "waiting..."
+        sleep 1
     done | nc -l -v -p "$1"
 done
