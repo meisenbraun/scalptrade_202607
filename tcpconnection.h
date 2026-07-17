@@ -30,7 +30,7 @@ private:
     int setNonBlocking();
     bool init();
 
-    static const int BufferSize_ = sizeof(QuoteDataWire) * 10 + 1;
+    static constexpr int BufferSize_ = sizeof(QuoteDataWire) * 10 + 1;
     char writeBuffer_[sizeof(OrderDataWire) * 2];
     int writeBufferSz_;
 

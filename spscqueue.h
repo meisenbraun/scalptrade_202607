@@ -1,10 +1,6 @@
 #pragma once
 #include <atomic>
-#include <optional>
-//#include <variant>
 #include "market_data.h"
-
-//using QueueEvent = std::variant<QuoteDataWire, TradeDataWire>;
 
 class SPSCQueue
 {

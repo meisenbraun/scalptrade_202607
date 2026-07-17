@@ -91,11 +91,7 @@ void SendOrderThread::run()
         ord.side = {'S', 'E', 'L', 'L'};
     }
 
-    //bool updated = false;
     bool shutdown = false;
-
-    //const char* initMsg = "SEND THREAD READY!\n";
-    //tcpConnection_->send((void*)initMsg, strlen(initMsg));
 
     while (true)
     {

@@ -151,17 +151,12 @@ bool TcpConnection::handleConnectionEstablished()
 
 void TcpConnection::recv(SPSCQueue& queue)
 {
-    //std::cout << "recv()\n";
-
-    //char readBuffer[BufferSize_];
     char* readBuffer = nullptr;
     char tradeReadBuffer[sizeof(TradeDataWire)];
     char quoteReadBuffer[sizeof(QuoteDataWire)];
     int readBufferSize = 0;
     const int quoteReadBufferSize = sizeof(QuoteDataWire);
     const int tradeReadBufferSize = sizeof(TradeDataWire);
-    //char* recStart = readBuffer;
-    //int recStartIdx = 0;
 
     // while loop required to drain recv buffer for ET mode
     while (true)
@@ -174,13 +169,11 @@ void TcpConnection::recv(SPSCQueue& queue)
             {
                 readBuffer = quoteReadBuffer;
                 readBufferSize = quoteReadBufferSize;
-//                std::cout <<"MESSAGE TYPE QUOTE!\n";
             }
             else if (msgType == MessageTypeTrade)
             {
                 readBuffer = tradeReadBuffer;
                 readBufferSize = tradeReadBufferSize;
-//                std::cout <<"MESSAGE TYPE TRADE!\n";
             }
             else
             {
@@ -190,38 +183,27 @@ void TcpConnection::recv(SPSCQueue& queue)
 
         auto recvRst = ::recv(socketFd_, readBuffer, readBufferSize, 0);
 
-        //auto recvRst = ::recv(socketFd_, readBuffer + recStartIdx, BufferSize_ - recStartIdx, 0);
-
         if (recvRst > 0)
         {
             readBuffer[recvRst] = '\0';
-//            std::cout<<readBuffer << "\n";
-//            std::cout << "RECEIVED\n";
-
-            //MessageType msgType = static_cast<MessageType>(readBuffer[recStartIdx]);
-
             QueueEvent ev;
             ev.msgType = static_cast<MessageType>(msgType);
 
-            //switch (readBuffer[recStartIdx])
             switch (msgType)
             {
             case MessageTypeQuote:
                 {
                     memcpy(&ev.quote, readBuffer, sizeof(QuoteDataWire));
                     queue.enqueue(std::move(ev));
-                    //recStartIdx += sizeof(MessageType) + sizeof(QuoteDataWire);
                 }
                 break;
             case MessageTypeTrade:
                 {
                     memcpy(&ev.trade, readBuffer, sizeof(TradeDataWire));
                     queue.enqueue(std::move(ev));
-                    //recStartIdx += sizeof(MessageType) + sizeof(TradeDataWire);
                 }
                 break;
 
-            //case MessageTypeOrder: break;
             default: ; // invalid message
             }
         }
@@ -235,7 +217,6 @@ void TcpConnection::recv(SPSCQueue& queue)
         {
             if (errno == EAGAIN || errno == EWOULDBLOCK) // ET must drain the buffer
             {
-                //std::cout << "EAGAIN\n";
                 break; // end of buffer; not an error in this context
             }
             else
