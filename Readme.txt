@@ -5,20 +5,22 @@ July 16, 2026
 Build Instructions
 make clean
 make
+./scalptrade_202607 IBM B 100 10 127.0.0.1 1234 127.0.0.1 1245
 
 Overview
 This project was developed and tested on Ubuntu 24.04 running on WSL 2 on
 Windows 10. g++ 15.2.0 was used.
 
 The program uses three threads to be able to create orders with low latency
-from the market data event that caused the trade. All three threads set the
-CPU affinity mask to lock them to individual single cores.
+from the market data event that caused the order. All three threads set the
+CPU affinity mask to lock them to individual cores.
 
-The main thread runs the epoll loop and networking I/O with non-blocking sockets.
+The primary thread runs the epoll loop and networking I/O with non-blocking sockets.
 Edge-triggered epoll is used more as demonstration of the technique than out of real
 need for this problem. If the problem were scaled up, as in a real production system,
 edge-triggered would be a more natural fit. Further, the read loop is designed to
-accommodate both partial and multiple records, as TCP may deliver either.
+accommodate both partial and multiple records, as TCP may deliver either. To ensure
+the socket is drained, required for edge-triggered mode, the socket is read until EAGAIN.
 
 When the epoll detects data is available data is read into a SPSCQueue lock-free
 queue for consumption by the business logic thread. This design allows records to be
@@ -28,8 +30,8 @@ The business logic thread is encapsulated by the ProcessQueueThread. This thread
 is non-blocking and continually drains the SPSCQueue. This thread handles data
 parsing, VWAP calculation, and Order triggering (but not sending). The VWAP
 Window is handled by checking the current time against the next window expiration
-time. std::chrono::system_clock is used for this check, because system_clock is
-designed for wall time. Then, when the thread detects that VWAP is favorable
+time. std::chrono::steady_clock is used for this check, because steady_clock is
+monotonically increasing. Then, when the thread detects that VWAP is favorable
 (vwap < bid for sells, vwap > ask for buys) with respect to the latest quote it
 copies the min(current quote size, user-specified maximum size) and price
 (ask for buy orders, bid for sell orders) into a struct that is available for
@@ -42,18 +44,17 @@ from the shared structure into local memory and uses those parameters to send a 
 order.
 
 Assumptions
-The market data feed will only contain a single symbol. This assumption seems warranted
-from prior experience with market feeds, which generally have both high-volume dedicated
-market feeds, and lower volume aggerated feeds combining multiple markets. This assumption
-was also justified by the loose and permissive language in the assessment description.
+The implementation assumes that the market data feed will only contain a single symbol.
+This assumption is based on the design of the assessment, which requires the symbol be
+provided on the cli. Furthermore, this assumption was also was also justified by the
+loose and permissive language in the assessment description.
 
 Design Tradeoffs
 The SPSCQueue has a fixed capacity hardcoded to 2048 records. This size was chosen
-because 1) It needs to be a power of two to be able to replace an expensive modulus
-operation with a fast bitwise and. And 2) This was sufficient for this application
-under tested conditions. The queue needs to be large enough to absorb latency between
-the business logic thread draining the queue and the primary thread writing to it.
-Should the 2048 size be exceeded the oldest items will be overwritten.
+because this was sufficient for this application under tested conditions. The queue needs
+to be large enough to absorb latency between the business logic thread draining the queue
+and the primary thread writing to it. Should the 2048 size be exceeded any new data will
+be dropped until room is made in the queue.
 
 Limitations
 Only system-level testing was used to validate the correctness of the solution.
@@ -70,7 +71,7 @@ No network reconnect behavior. Network errors generally result in dropped connec
 
 Testing
 Most of the testing was done using two netcat servers to stand-in for the real servers.
-The order entry server was created via "nc -v -l 1245" MD server ran the script below
+The order entry server was created via "nc -v -l 1245" MD server ran the script below:
 
 #!/bin/bash
 # $1 is port
@@ -106,7 +107,7 @@ The testing setup included a test server with both of the connection endpoints.
 The test server and the client application were running on the same machine. The only
 performance metric that was measured was latency.
 
-In the metrics below are defined as
+The metrics below are defined as follows:
 Full round trip = server order-receive timestamp - quote timestamp
 Server to order = order timestamp - quote timestamp
 Client to server = server order-receive timestamp - order timestamp
@@ -153,15 +154,20 @@ In both cases the client was run with these arguments:
 IBM B 100 10 127.0.0.1 1234 127.0.0.2 1245
 
 Of note in the statistics above is that the 0ms delay test showed improvement in the low-end latency but worse tail
-latency. This is indictive of queueing and backpressure and is expected under sustained-load conditions.
+latency. This is indicative of queueing and backpressure and is expected under sustained-load conditions.
 
 
 Message Formats
 All messages use fixed-width fields. Only ASCII characters are used. Strings are not null-terminated.
+Note that the assessment author confirmed with SCALP Trade that fields could be added to the provided
+message formats. Fields message type, seq num and corr id were add to the provided message formats.
+
 The message type field on Quote and Trade messages were added to allow easy discrimination of messages
 over a shared socket. The seq num field on the Quote message and the corr id field on the Order message
 were added to allow for reliable calculation of latencies. They are not otherwise directly used by the
 client; the latencies are computed in the test server.
+
+
 
 Quotes
 Total message size: 57 bytes
@@ -193,13 +199,5 @@ Total message size: 48 bytes
 29     6     qty          right padded with spaces
 35     6     price        price in pennies, right padded with spaces
 41     7     corr id      correlation id -- seq num of the quote that triggered this order, right padded with spaces
-
-
-Resources Used
-Google and StackOverflow were both used extensively information networking.
-The SPSCQueue implementation is not directly based on an existing implementation,
-but I reviewed several as research. Rigtorp/SPSCQueue
-(https://github.com/rigtorp/SPSCQueue) and Boost spsc_queue
- (https://www.boost.org/doc/libs/1_78_0/doc/html/boost/lockfree/spsc_queue.html).
 
 
