@@ -154,10 +154,10 @@ void TcpConnection::recv(SPSCQueue& queue)
     //std::cout << "recv()\n";
 
     //char readBuffer[BufferSize_];
-    char* readBuffer;
+    char* readBuffer = nullptr;
     char tradeReadBuffer[sizeof(TradeDataWire)];
     char quoteReadBuffer[sizeof(QuoteDataWire)];
-    int readBufferSize;
+    int readBufferSize = 0;
     const int quoteReadBufferSize = sizeof(QuoteDataWire);
     const int tradeReadBufferSize = sizeof(TradeDataWire);
     //char* recStart = readBuffer;
@@ -174,13 +174,13 @@ void TcpConnection::recv(SPSCQueue& queue)
             {
                 readBuffer = quoteReadBuffer;
                 readBufferSize = quoteReadBufferSize;
-                std::cout <<"MESSAGE TYPE QUOTE!\n";
+//                std::cout <<"MESSAGE TYPE QUOTE!\n";
             }
             else if (msgType == MessageTypeTrade)
             {
                 readBuffer = tradeReadBuffer;
                 readBufferSize = tradeReadBufferSize;
-                std::cout <<"MESSAGE TYPE TRADE!\n";
+//                std::cout <<"MESSAGE TYPE TRADE!\n";
             }
             else
             {
@@ -195,8 +195,8 @@ void TcpConnection::recv(SPSCQueue& queue)
         if (recvRst > 0)
         {
             readBuffer[recvRst] = '\0';
-            std::cout<<readBuffer << "\n";
-            std::cout << "RECEIVED\n";
+//            std::cout<<readBuffer << "\n";
+//            std::cout << "RECEIVED\n";
 
             //MessageType msgType = static_cast<MessageType>(readBuffer[recStartIdx]);
 

@@ -1,13 +1,11 @@
 #include "processqueuethread.h"
 #include "market_data.h"
-#include "publishsignal.h"
 
 #include <algorithm>
 #include <chrono>
 
 #include <sched.h>
 #include <iostream>
-#include <immintrin.h>
 
 
 ProcessQueueThread::ProcessQueueThread(SPSCQueue& queue) :
@@ -167,35 +165,66 @@ bool ProcessQueueThread::processQuote(QuoteDataWire&& data)
         return false;
     }
 
+    try
+    {
+        quote.seqNum = std::stoi(std::string(data.seqNum.data(), data.seqNum.size()));
+    }
+    catch (std::exception& e)
+    {
+        return false;
+    }
+
+
     switch (side_)
     {
         case SideEnum::SideBuy:
         {
-            std::cout<<"Processing BUY quote (ask:" << quote.askPrice << " vwap: " << last_vwap_ << ")...\n";
+            //std::cout<<"Processing BUY quote (ask:" << quote.askPrice << " vwap: " << last_vwap_ << ")...\n";
 
             if (quote.askPrice < last_vwap_)
             {
-                std::cout << "... Sending order!\n";
+                //std::cout << "... Sending order!\n"
 
-                // update params for order thread
-                pubSig_->qty = std::min(quote.askQty, maxSize_);
-                pubSig_->price = last_vwap_;
-                pubSig_->updated.store(true, std::memory_order_release);
+                updatePublishSignal(quote.askQty, quote.askPrice, quote.seqNum);
+
+                // // spin until the order entry thread has cleard the flag
+                // // prevents the PublishSignal struct from being written while read
+                // while (pubSig_->updated.load(std::memory_ordere_acquire))
+                // {
+                //     _mm_pause();
+                // }
+                //
+                // // update params for order thread
+                // pubSig_->qty = std::min(quote.askQty, maxSize_);
+                // pubSig_->price = last_vwap_;
+                // pubSig_->quoteSeqNum = quote.seqNum;
+                //
+                // pubSig_->updated.store(true, std::memory_order_release);
             }
             break;
         }
         case SideEnum::SideSell:
         {
-            std::cout<<"Processing SELL quote (bid:" << quote.bidPrice << " vwap: " << last_vwap_ << ")...\n";
+            //std::cout<<"Processing SELL quote (bid:" << quote.bidPrice << " vwap: " << last_vwap_ << ")...\n";
 
             if (quote.bidPrice > last_vwap_)
             {
-                std::cout << "... Sending order!\n";
+                //std::cout << "... Sending order!\n";
 
-                // update params for order thread
-                pubSig_->qty = std::min(quote.bidQty, maxSize_);
-                pubSig_->price = last_vwap_;
-                pubSig_->updated.store(true, std::memory_order_release);
+                updatePublishSignal(quote.bidQty, quote.bidPrice, quote.seqNum);
+
+                // // spin until the order entry thread has cleard the flag
+                // // prevents the PublishSignal struct from being written while read
+                // while (pubSig_->updated.load(std::memory_ordere_acquire))
+                // {
+                //     _mm_pause();
+                // }
+                //
+                // // update params for order thread
+                // pubSig_->qty = std::min(quote.bidQty, maxSize_);
+                // pubSig_->price = last_vwap_;
+                // pubSig_->quoteSeqNum = quote.seqNum;
+                // pubSig_->updated.store(true, std::memory_order_release);
             }
             break;
         }
@@ -218,7 +247,7 @@ bool ProcessQueueThread::processTrade(TradeDataWire&& data)
     {
         // parse error, skip the record
 
-        std::cout << "ERROR1\n";
+        //std::cout << "ERROR1\n";
         return false;
     }
 
@@ -228,7 +257,7 @@ bool ProcessQueueThread::processTrade(TradeDataWire&& data)
     }
     catch (std::exception& e)
     {
-        std::cout << "ERROR2\n";
+        //std::cout << "ERROR2\n";
         return false;
     }
 
@@ -238,7 +267,7 @@ bool ProcessQueueThread::processTrade(TradeDataWire&& data)
     }
     catch (std::exception& e)
     {
-        std::cout << "ERROR3\n";
+        //std::cout << "ERROR3\n";
         return false;
     }
 
@@ -248,7 +277,7 @@ bool ProcessQueueThread::processTrade(TradeDataWire&& data)
     const int denominator = trade.qty;
     vwap_denominator_ += denominator;
 
-    std::cout << "Processing Trade (denominator:" << denominator << "  qty:" << trade.qty << ")...\n";
+    //std::cout << "Processing Trade (denominator:" << denominator << "  qty:" << trade.qty << ")...\n";
 
     return true;
 }
@@ -267,13 +296,13 @@ void ProcessQueueThread::updateVwap()
 {
     long newVwap = 0;
 
-    std::cout <<"UPDATE VWAP TRIGGERED\n";
+    //std::cout <<"UPDATE VWAP TRIGGERED\n";
 
     if (vwap_denominator_ != 0)
     {
 
         newVwap = vwap_numerator_ / vwap_denominator_;
-        std::cout << "UPDATING VWAP " << last_vwap_ << "  " << newVwap << std::endl;
+        //std::cout << "UPDATING VWAP " << last_vwap_ << "  " << newVwap << std::endl;
         last_vwap_ = newVwap;
         vwap_valid_ = true;
     }

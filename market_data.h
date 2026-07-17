@@ -35,7 +35,7 @@ struct QuoteDataWire
     std::array<char, 6>  bidPrice;
     std::array<char, 6>  askQty;
     std::array<char, 6>  askPrice;
-    std::array<char, 7>  seqNum; // monotically increasing id
+    std::array<char, 7>  seqNum; // monotonically increasing id
 };
 
 struct TradeDataWire

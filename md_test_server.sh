@@ -4,8 +4,8 @@
 
 while true; do
     while true; do
-        cat $2
-        echo "waiting..."
+        cat "$2"
+        echo "waiting..." >&2
         sleep 1
     done | nc -l -v -p "$1"
 done

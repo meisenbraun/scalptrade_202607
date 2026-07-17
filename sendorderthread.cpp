@@ -77,14 +77,14 @@ void SendOrderThread::run()
     }
     for (; i < ord.sym.size(); ++i)
     {
-        ord.sym[i] = '\0'; // pad with nulls;
+        ord.sym[i] = ' '; // pad with spaces;
     }
 
     switch (side_)
     {
     case SideEnum::SideBuy:
     {
-        ord.side = {'B','U','Y','\0'}; // null padded
+        ord.side = {'B','U','Y',' '}; // space padded
     }
     break;
     case SideEnum::SideSell:
@@ -94,8 +94,8 @@ void SendOrderThread::run()
     //bool updated = false;
     bool shutdown = false;
 
-    const char* initMsg = "SEND THREAD READY!\n";
-    tcpConnection_->send((void*)initMsg, strlen(initMsg));
+    //const char* initMsg = "SEND THREAD READY!\n";
+    //tcpConnection_->send((void*)initMsg, strlen(initMsg));
 
     while (true)
     {
@@ -113,18 +113,18 @@ void SendOrderThread::run()
 
         long myPrice = pubSig_->price;
         int myQty = pubSig_->qty;
+        int32_t mySeq = pubSig_->quoteSeqNum;
 
         pubSig_->updated.store(false, std::memory_order_release);
 
-        auto nanoNow = std::chrono::duration_cast<std::chrono::nanoseconds>(clock::now().time_since_epoch()).count();
+        const auto nanoNow = std::chrono::duration_cast<std::chrono::nanoseconds>(clock::now().time_since_epoch()).count();
         formatTimestamp(nanoNow, ord.timestampNs);
 
         formatQtyAndPrice(myQty, ord.qty);
         formatQtyAndPrice(myPrice, ord.price);
-
+        formatSeq(mySeq, ord.corrId);
 
         /// send order
-
         tcpConnection_->send(&ord, sizeof(OrderDataWire));
     }
 }
@@ -159,6 +159,21 @@ bool SendOrderThread::formatQtyAndPrice(int32_t val, std::array<char, 6>& out) c
 
     return val == 0; // false if val is more than 6 digits
 }
+
+// Slight variation on the above
+bool SendOrderThread::formatSeq(int32_t val, std::array<char, 7>& out) const
+{
+    if (val < 0) {return false;}
+
+    for (auto iter = out.rbegin(); iter != out.rend(); ++iter)
+    {
+        *iter = static_cast<char>('0' + (val % 10));
+        val /= 10;
+    }
+
+    return val == 0; // false if val is more than 7 digits
+}
+
 
 void SendOrderThread::setTcpConnection(TcpConnection* conn)
 {

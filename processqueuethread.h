@@ -1,10 +1,12 @@
 #pragma once
-#include <thread>
 #include "programargs.h"
 #include "spscqueue.h"
+#include "publishsignal.h"
 
+#include <atomic>
+#include <thread>
 
-struct PublishSignal;
+#include <immintrin.h>
 
 class ProcessQueueThread
 {
@@ -29,6 +31,7 @@ private:
     bool processQuote(QuoteDataWire&& data);
     bool processTrade(TradeDataWire&& data);
     void updateVwap();
+    void updatePublishSignal(int32_t qty, int32_t price, int32_t seqNum);
 
     // Sym is invariant for a given data feed.
     // This application only supports a single data feed,
@@ -49,3 +52,21 @@ private:
     PublishSignal* pubSig_; // For communicating with the sending thread
 
 };
+
+__attribute__((always_inline))
+inline void ProcessQueueThread::updatePublishSignal(int32_t qty, int32_t price, int32_t seqNum)
+{
+    // spin until the order entry thread has cleard the flag
+    // prevents the PublishSignal struct from being written while read
+    while (pubSig_->updated.load(std::memory_order_acquire))
+    {
+        _mm_pause();
+    }
+
+    // update params for order thread
+    pubSig_->qty = std::min(qty, maxSize_);
+    pubSig_->price = price;
+    pubSig_->quoteSeqNum = seqNum;
+
+    pubSig_->updated.store(true, std::memory_order_release);
+}

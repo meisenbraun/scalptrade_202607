@@ -25,6 +25,7 @@ private:
     void run();
     bool formatTimestamp(int64_t val, std::array<char, 19>& out) const;
     bool formatQtyAndPrice(int32_t val, std::array<char, 6>& out) const;
+    bool formatSeq(int32_t val, std::array<char, 7>& out) const;
 
     std::thread thread_;
 
